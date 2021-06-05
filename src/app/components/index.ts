@@ -1,1 +1,1 @@
-// export { default as SomeComponent } from './SomeComponent/SomeComponent;
+export { default as Cell } from './Cell/Cell';
