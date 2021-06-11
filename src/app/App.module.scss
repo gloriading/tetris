@@ -1,5 +1,8 @@
 @import '../../assets/css/config';
 
+$row: 20;
+$column: 10;
+
 .app {
   box-sizing: border-box;
   margin: 0;
@@ -8,25 +11,23 @@
   overflow: hidden;
   background-color: darken($primary-bg-color, 5%);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
 .gridBoard {
-  display: grid;
-  grid-gap: 2px;
-  grid-template-columns: repeat(10, 25px);
-  grid-template-rows: repeat(10, 25px);
-  grid-auto-flow: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 270px;
 }
 
-.gridBoard > * {
-  background-color: $green;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: darken($green, 20%);
-    cursor: pointer;
-  }  
-}
-
+// .gridBoard {
+//   display: grid;
+//   grid-gap: 2px;
+//   grid-template-columns: repeat($column, 25px);
+//   grid-template-rows: repeat($row, 25px);
+//   grid-auto-flow: column;
+// }

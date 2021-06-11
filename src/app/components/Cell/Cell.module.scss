@@ -1,0 +1,44 @@
+@import '../../../../assets//css/config';
+
+%cell {
+  height: 25px;
+  width: 25px;
+  margin: 1px;
+}
+
+.basicCell {
+  @extend %cell;
+  background-color: $light-grey;
+}
+
+.L {
+  @extend %cell;
+  background-color: $red;
+}
+
+.I {
+  @extend %cell;
+  background-color: $green;
+}
+
+.T {
+  @extend %cell;
+  background-color: $yellow;
+}
+
+.O {
+  @extend %cell;
+  background-color: $pink;
+}
+.S {
+  @extend %cell;
+  background-color: $purple;
+}
+.Z {
+  @extend %cell;
+  background-color: $blue;
+}
+.J {
+  @extend %cell;
+  background-color: $silver;
+}

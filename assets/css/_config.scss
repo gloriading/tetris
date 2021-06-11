@@ -1,7 +1,19 @@
 $primary-bg-color: whitesmoke;
-$green: #73C6B6;
+$dark-grey: #666;
+$light-grey: #CCC;
+$green: #10ac84;
+$red: #ee5253;
+$blue: #2e86de;
+$yellow: #ff9f43;
+$pink: #f368e0;
+$purple: #341f97;
+$silver: #8395a7;
+
 
 body {
   margin: 0;
   font-family: sans-serif;
 }
+
+
+@import 'button';
