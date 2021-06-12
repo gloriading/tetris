@@ -1,5 +1,6 @@
 // TYPE
 export type Coords = [number, number];
+export type Action = () => void;
 
 // INTERFACE
 export interface Block {
@@ -7,9 +8,17 @@ export interface Block {
   coords: Coords[];
 }
 
+export interface ActionMap {
+  [key: string]: Action;
+}
+
 // TYPE GUARDS
 export function isShapeInitialized(shape: Block | undefined): shape is Block {
   return shape !== undefined;
+}
+
+export function isVariationInitialized(variation: Coords[] | undefined): variation is Coords[] {
+  return variation !== undefined;
 }
 
 // ENUM
@@ -28,4 +37,5 @@ export enum Direction {
   Down = 'DOWN',
   Left = 'LEFT',
   Right = 'RIGHT',
+  Drop = 'DROP',
 }

@@ -1,28 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './App.module.scss';
 import { Cell } from './components';
-import { SHAPES_INIT, BOUND } from './utils/constants';
-import { Direction, Coords, Block, isShapeInitialized } from './utils/types';
+import { SHAPES_INIT, BOUND, VARIATIONS } from './utils/constants';
+import { Direction, Coords, Block, isShapeInitialized, ActionMap, isVariationInitialized } from './utils/types';
 
 export function App(): JSX.Element {
   const START_GRID = createGrid(20, 10);
-
   const [grid, setGrid] = useState<string[][]>(START_GRID);
   const [currShape, setCurrShape] = useState<Block>();
+  const [variation, setVariation] = useState<Coords[]>();
 
   const handleKeyDown = useCallback((event: KeyboardEvent): void => {
-    type Action = () => void;
-
-    interface ActionMap {
-      [key: string]: Action;
-    }
-
     const actionMap: ActionMap = {
       ArrowUp: () => handleMovement(Direction.Up),
       ArrowLeft: () => handleMovement(Direction.Left),
       ArrowRight: () => handleMovement(Direction.Right),
       ArrowDown: () => handleMovement(Direction.Down),
-      ' ': () => console.log('space'),
+      ' ': () => handleMovement(Direction.Drop),
     };
 
     const action = actionMap[event.key];
@@ -36,10 +30,13 @@ export function App(): JSX.Element {
       [Direction.Down]: ([x]: Coords) => x === BOUND.DOWN,
       [Direction.Left]: ([, y]: Coords) => y === BOUND.LEFT,
       [Direction.Right]: ([, y]: Coords) => y === BOUND.RIGHT,
-      [Direction.Up]: ([,]: Coords) => true,
+      [Direction.Up]: ([,]: Coords) => false,
+      [Direction.Drop]: ([x]: Coords) => x === BOUND.DOWN,
     };
 
-    const reducers: { [key in Direction]: (coordsArr: Coords[], coords: Coords) => Coords[] } = {
+    const reducers: {
+      [key in Direction]: (coordsArr: Coords[], coords: Coords, idx: number, originCoords: Coords[]) => Coords[];
+    } = {
       [Direction.Down]: (updatedCoords, pair) => {
         const [xCoords, yCoords] = pair;
         return [...updatedCoords, [xCoords + 1, yCoords]];
@@ -52,7 +49,20 @@ export function App(): JSX.Element {
         const [xCoords, yCoords] = pair;
         return [...updatedCoords, [xCoords, yCoords + 1]];
       },
-      [Direction.Up]: (updatedCoords, pair) => [...updatedCoords, pair],
+      [Direction.Drop]: (updatedCoords, pair, _idx, originCoords) => {
+        const [xCoords, yCoords] = pair;
+        const bottomXCoords = Math.max(...originCoords.map((_pair) => _pair[0]));
+        const deviation = xCoords - bottomXCoords;
+        return [...updatedCoords, [BOUND.DOWN + deviation, yCoords]];
+      },
+      [Direction.Up]: (updatedCoords, pair, idx) => {
+        if (!isVariationInitialized(variation)) {
+          return [...updatedCoords, pair];
+        }
+        const [xCoords, yCoords] = pair;
+        const [xDev, yDev] = variation[idx];
+        return [...updatedCoords, [xCoords + xDev, yCoords + yDev]];
+      },
     };
 
     const bounFn = boundFns[key];
@@ -73,10 +83,12 @@ export function App(): JSX.Element {
   }
 
   useEffect(() => {
-    const initShapes = Object.values(SHAPES_INIT);
-    const randomIdx = Math.floor(Math.random() * initShapes.length);
-    const randomStart = initShapes[randomIdx];
-    setCurrShape(randomStart);
+    const allLetters = Object.keys(SHAPES_INIT);
+    const randomIdx = Math.floor(Math.random() * allLetters.length);
+    const randomLetter = allLetters[randomIdx];
+
+    setCurrShape(SHAPES_INIT[randomLetter]);
+    setVariation(VARIATIONS[randomLetter][0]);
 
     document.addEventListener('keydown', handleKeyDown, false);
 
