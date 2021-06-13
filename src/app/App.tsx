@@ -1,95 +1,95 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import styles from './App.module.scss';
 import { Cell } from './components';
-import { SHAPES_INIT, BOUND, VARIATIONS } from './utils/constants';
-import { Direction, Coords, Block, isShapeInitialized, ActionMap, isVariationInitialized } from './utils/types';
+import { SHAPES_INIT, BOUND, SHAPE_VARIATIONS } from './utils/constants';
+import { Direction, Coords, Block, isShapeInitialized, ActionMap, Shape, ActionType, Variation } from './utils/types';
 
 export function App(): JSX.Element {
-  const START_GRID = createGrid(20, 10);
+  const START_GRID = createGrid(22, 10);
   const [grid, setGrid] = useState<string[][]>(START_GRID);
-  const [currShape, setCurrShape] = useState<Block>();
-  const [variation, setVariation] = useState<Coords[]>();
 
-  const handleKeyDown = useCallback((event: KeyboardEvent): void => {
-    const actionMap: ActionMap = {
-      ArrowUp: () => handleMovement(Direction.Up),
-      ArrowLeft: () => handleMovement(Direction.Left),
-      ArrowRight: () => handleMovement(Direction.Right),
-      ArrowDown: () => handleMovement(Direction.Down),
-      ' ': () => handleMovement(Direction.Drop),
+  const initialState: Block = getRandomShape();
+  const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(reducer, initialState);
+
+  function reducer(state: Block, action: ActionType): Block {
+    if (!isShapeInitialized(state)) return state;
+    const variationCoords = SHAPE_VARIATIONS[state.name][state.variation];
+
+    switch (action.type) {
+      case Direction.Up:
+        return handleMovement(state, Direction.Up, variationCoords);
+      case Direction.Left:
+        return handleMovement(state, Direction.Left);
+      case Direction.Right:
+        return handleMovement(state, Direction.Right);
+      case Direction.Down:
+        return handleMovement(state, Direction.Down);
+      case Direction.Drop:
+        return handleMovement(state, Direction.Drop);
+      default:
+        return state;
+    }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    const typeMap: ActionMap = {
+      ArrowRight: Direction.Right,
+      ArrowLeft: Direction.Left,
+      ArrowDown: Direction.Down,
+      ArrowUp: Direction.Up,
+      ' ': Direction.Drop,
     };
 
-    const action = actionMap[event.key];
+    const actionType = typeMap[event.key];
+    if (!actionType) return;
 
-    if (!action) return;
-    action();
-  }, []);
+    shapeDispatch({ type: actionType });
+  };
 
-  function handleMovement(key: Direction): void {
+  function handleMovement(currState: Block, key: Direction, variationCoords?: Coords[]): Block {
     const boundFns: { [key in Direction]: (coords: Coords) => boolean } = {
-      [Direction.Down]: ([x]: Coords) => x === BOUND.DOWN,
-      [Direction.Left]: ([, y]: Coords) => y === BOUND.LEFT,
-      [Direction.Right]: ([, y]: Coords) => y === BOUND.RIGHT,
-      [Direction.Up]: ([,]: Coords) => false,
-      [Direction.Drop]: ([x]: Coords) => x === BOUND.DOWN,
+      [Direction.Down]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
+      [Direction.Left]: ([, yCoords]: Coords) => yCoords === BOUND.LEFT,
+      [Direction.Right]: ([, yCoords]: Coords) => yCoords === BOUND.RIGHT,
+      [Direction.Up]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
+      [Direction.Drop]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
     };
 
-    const reducers: {
+    const reducerMap: {
       [key in Direction]: (coordsArr: Coords[], coords: Coords, idx: number, originCoords: Coords[]) => Coords[];
     } = {
-      [Direction.Down]: (updatedCoords, pair) => {
-        const [xCoords, yCoords] = pair;
-        return [...updatedCoords, [xCoords + 1, yCoords]];
-      },
-      [Direction.Left]: (updatedCoords, pair) => {
-        const [xCoords, yCoords] = pair;
-        return [...updatedCoords, [xCoords, yCoords - 1]];
-      },
-      [Direction.Right]: (updatedCoords, pair) => {
-        const [xCoords, yCoords] = pair;
-        return [...updatedCoords, [xCoords, yCoords + 1]];
-      },
-      [Direction.Drop]: (updatedCoords, pair, _idx, originCoords) => {
-        const [xCoords, yCoords] = pair;
+      [Direction.Down]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords + 1, yCoords]],
+      [Direction.Left]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords, yCoords - 1]],
+      [Direction.Right]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords, yCoords + 1]],
+      [Direction.Drop]: (updatedCoords, [xCoords, yCoords], _idx, originCoords) => {
         const bottomXCoords = Math.max(...originCoords.map((_pair) => _pair[0]));
         const deviation = xCoords - bottomXCoords;
         return [...updatedCoords, [BOUND.DOWN + deviation, yCoords]];
       },
-      [Direction.Up]: (updatedCoords, pair, idx) => {
-        if (!isVariationInitialized(variation)) {
-          return [...updatedCoords, pair];
-        }
-        const [xCoords, yCoords] = pair;
-        const [xDev, yDev] = variation[idx];
+      [Direction.Up]: (updatedCoords, [xCoords, yCoords], idx) => {
+        const [xDev, yDev] = (variationCoords as Coords[])[idx];
         return [...updatedCoords, [xCoords + xDev, yCoords + yDev]];
       },
     };
 
-    const bounFn = boundFns[key];
-    const reducer = reducers[key];
+    const hasReachedBoundary = currState.coords.some(boundFns[key]);
+    if (hasReachedBoundary) return currState;
 
-    setCurrShape((prev) => {
-      if (!isShapeInitialized(prev)) return prev;
-      const hasReachedBoundary = prev.coords.some(bounFn);
-      if (hasReachedBoundary) return prev;
+    const newCoords = currState.coords.reduce(reducerMap[key], [] as Coords[]);
 
-      const newCoords = prev.coords.reduce(reducer, [] as Coords[]);
+    let newVariation = currState.variation;
+    if (key === Direction.Up) {
+      newVariation = newVariation === Variation.END ? Variation.START : newVariation + Variation.INCREMENT;
+    }
 
-      return {
-        ...prev,
-        coords: newCoords,
-      };
-    });
+    return {
+      ...currState,
+      coords: newCoords,
+      variation: newVariation,
+    };
   }
 
   useEffect(() => {
-    const allLetters = Object.keys(SHAPES_INIT);
-    const randomIdx = Math.floor(Math.random() * allLetters.length);
-    const randomLetter = allLetters[randomIdx];
-
-    setCurrShape(SHAPES_INIT[randomLetter]);
-    setVariation(VARIATIONS[randomLetter][0]);
-
     document.addEventListener('keydown', handleKeyDown, false);
 
     return () => {
@@ -120,6 +120,13 @@ export function App(): JSX.Element {
 
   function createGrid(row: number, column: number): string[][] {
     return Array.from({ length: row }, () => Array.from({ length: column }, (_v, i) => i.toString()));
+  }
+
+  function getRandomShape(): Block {
+    const allLetters = Object.keys(SHAPES_INIT) as Shape[];
+    const randomIdx = Math.floor(Math.random() * allLetters.length);
+    const randomLetter = allLetters[randomIdx];
+    return SHAPES_INIT[randomLetter];
   }
 
   return (
