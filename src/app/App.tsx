@@ -3,6 +3,7 @@ import styles from './App.module.scss';
 import { Cell } from './components';
 import { SHAPES_INIT, BOUND, SHAPE_VARIATIONS } from './utils/constants';
 import { Direction, Coords, Block, isShapeInitialized, ActionMap, Shape, ActionType, Variation } from './utils/types';
+import useInterval from './utils/useInterval';
 
 export function App(): JSX.Element {
   const START_GRID = createGrid(22, 10);
@@ -10,6 +11,8 @@ export function App(): JSX.Element {
 
   const initialState: Block = getRandomShape();
   const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(reducer, initialState);
+  const [delay, setDelay] = useState<number>(1000);
+  const [isRunning, setIsRunning] = useState<boolean>(true);
 
   function reducer(state: Block, action: ActionType): Block {
     if (!isShapeInitialized(state)) return state;
@@ -89,6 +92,13 @@ export function App(): JSX.Element {
     };
   }
 
+  useInterval(
+    () => {
+      shapeDispatch({ type: Direction.Down });
+    },
+    isRunning ? delay : null,
+  );
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown, false);
 
@@ -98,6 +108,9 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    if (currShape.coords.some(([xCoords]) => xCoords === BOUND.DOWN)) {
+      setIsRunning(false);
+    }
     if (isShapeInitialized(currShape)) {
       updateLocation(currShape);
     }

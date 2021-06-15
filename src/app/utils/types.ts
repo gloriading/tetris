@@ -1,5 +1,6 @@
 // TYPE
 export type Coords = [number, number];
+export type Callback = () => void;
 
 // INTERFACE
 export interface Block {
