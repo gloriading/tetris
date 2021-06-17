@@ -14,7 +14,7 @@ export interface ActionMap {
 }
 
 export interface ActionType {
-  type: Shape | Direction;
+  type: Shape | Direction | Command;
 }
 
 // ENUM
@@ -42,11 +42,19 @@ export enum Variation {
   INCREMENT = 1,
 }
 
-// TYPE GUARDS
-export function isShapeInitialized(shape: Block | undefined): shape is Block {
-  return shape !== undefined;
+export enum Command {
+  NEXT_BLOCK = 'NEXT_BLOCK',
 }
+
+// TYPE GUARDS
+// export function isShapeInitialized(shape: Block | undefined): shape is Block {
+//   return shape !== undefined;
+// }
 
 export function isActionTypeShape(type: Shape | Direction): type is Shape {
   return type in Shape;
+}
+
+export function isDirection(type: Shape | Direction | Command): type is Direction {
+  return [Direction.Up, Direction.Down, Direction.Left, Direction.Right, Direction.Drop].includes(type as Direction);
 }

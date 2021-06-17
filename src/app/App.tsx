@@ -1,37 +1,27 @@
 import React, { useState, useEffect, useReducer } from 'react';
 import styles from './App.module.scss';
 import { Cell } from './components';
-import { SHAPES_INIT, BOUND, SHAPE_VARIATIONS } from './utils/constants';
-import { Direction, Coords, Block, isShapeInitialized, ActionMap, Shape, ActionType, Variation } from './utils/types';
+import { BOUND, SHAPE_VARIATIONS } from './utils/constants';
+import { Direction, Block, ActionMap, ActionType, Command, isDirection } from './utils/types';
 import useInterval from './utils/useInterval';
+import { handleMovement, createGrid, getRandomShape, getCellType } from './utils/helpers';
 
 export function App(): JSX.Element {
   const START_GRID = createGrid(22, 10);
+  const [preGrid, setPreGrid] = useState<string[][]>(START_GRID);
   const [grid, setGrid] = useState<string[][]>(START_GRID);
-
-  const initialState: Block = getRandomShape();
-  const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(reducer, initialState);
   const [delay, setDelay] = useState<number>(1000);
   const [isRunning, setIsRunning] = useState<boolean>(true);
+  const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(shapeReducer, getRandomShape());
 
-  function reducer(state: Block, action: ActionType): Block {
-    if (!isShapeInitialized(state)) return state;
-    const variationCoords = SHAPE_VARIATIONS[state.name][state.variation];
-
-    switch (action.type) {
-      case Direction.Up:
-        return handleMovement(state, Direction.Up, variationCoords);
-      case Direction.Left:
-        return handleMovement(state, Direction.Left);
-      case Direction.Right:
-        return handleMovement(state, Direction.Right);
-      case Direction.Down:
-        return handleMovement(state, Direction.Down);
-      case Direction.Drop:
-        return handleMovement(state, Direction.Drop);
-      default:
-        return state;
+  function shapeReducer(state: Block, action: ActionType): Block {
+    if (action.type === Command.NEXT_BLOCK) {
+      return getRandomShape();
     }
+    if (isDirection(action.type)) {
+      return handleMovement(state, action.type, SHAPE_VARIATIONS[state.name][state.variation]);
+    }
+    return state;
   }
 
   const handleKeyDown = (event: KeyboardEvent): void => {
@@ -48,49 +38,6 @@ export function App(): JSX.Element {
 
     shapeDispatch({ type: actionType });
   };
-
-  function handleMovement(currState: Block, key: Direction, variationCoords?: Coords[]): Block {
-    const boundFns: { [key in Direction]: (coords: Coords) => boolean } = {
-      [Direction.Down]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
-      [Direction.Left]: ([, yCoords]: Coords) => yCoords === BOUND.LEFT,
-      [Direction.Right]: ([, yCoords]: Coords) => yCoords === BOUND.RIGHT,
-      [Direction.Up]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
-      [Direction.Drop]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
-    };
-
-    const reducerMap: {
-      [key in Direction]: (coordsArr: Coords[], coords: Coords, idx: number, originCoords: Coords[]) => Coords[];
-    } = {
-      [Direction.Down]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords + 1, yCoords]],
-      [Direction.Left]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords, yCoords - 1]],
-      [Direction.Right]: (updatedCoords, [xCoords, yCoords]) => [...updatedCoords, [xCoords, yCoords + 1]],
-      [Direction.Drop]: (updatedCoords, [xCoords, yCoords], _idx, originCoords) => {
-        const bottomXCoords = Math.max(...originCoords.map((_pair) => _pair[0]));
-        const deviation = xCoords - bottomXCoords;
-        return [...updatedCoords, [BOUND.DOWN + deviation, yCoords]];
-      },
-      [Direction.Up]: (updatedCoords, [xCoords, yCoords], idx) => {
-        const [xDev, yDev] = (variationCoords as Coords[])[idx];
-        return [...updatedCoords, [xCoords + xDev, yCoords + yDev]];
-      },
-    };
-
-    const hasReachedBoundary = currState.coords.some(boundFns[key]);
-    if (hasReachedBoundary) return currState;
-
-    const newCoords = currState.coords.reduce(reducerMap[key], [] as Coords[]);
-
-    let newVariation = currState.variation;
-    if (key === Direction.Up) {
-      newVariation = newVariation === Variation.END ? Variation.START : newVariation + Variation.INCREMENT;
-    }
-
-    return {
-      ...currState,
-      coords: newCoords,
-      variation: newVariation,
-    };
-  }
 
   useInterval(
     () => {
@@ -111,35 +58,25 @@ export function App(): JSX.Element {
     if (currShape.coords.some(([xCoords]) => xCoords === BOUND.DOWN)) {
       setIsRunning(false);
     }
-    if (isShapeInitialized(currShape)) {
-      updateLocation(currShape);
-    }
+
+    updateGrid(currShape);
   }, [currShape]);
 
-  function updateLocation(blockType: Block) {
-    const clonedGrid = [...START_GRID];
+  useEffect(() => {
+    if (isRunning) return;
+    setPreGrid(grid);
+    shapeDispatch({ type: Command.NEXT_BLOCK });
+    setIsRunning(true);
+  }, [isRunning]);
+
+  function updateGrid(blockType: Block) {
+    const clonedGrid = JSON.parse(JSON.stringify(preGrid)) as string[][];
     blockType.coords.forEach(([x, y]) => {
       const temp = clonedGrid[x][y];
       clonedGrid[x][y] = `${temp}_${blockType.name}`;
     });
 
     setGrid(clonedGrid);
-  }
-
-  function getCellType(str: string): string {
-    if (!str.includes('_')) return 'basicCell';
-    return str.split('_')[1];
-  }
-
-  function createGrid(row: number, column: number): string[][] {
-    return Array.from({ length: row }, () => Array.from({ length: column }, (_v, i) => i.toString()));
-  }
-
-  function getRandomShape(): Block {
-    const allLetters = Object.keys(SHAPES_INIT) as Shape[];
-    const randomIdx = Math.floor(Math.random() * allLetters.length);
-    const randomLetter = allLetters[randomIdx];
-    return SHAPES_INIT[randomLetter];
   }
 
   return (
