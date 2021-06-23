@@ -2,23 +2,20 @@
   display: inline-block;
   border-radius: 2px;
   padding: 8px 12px;
-  margin: 3px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   letter-spacing: 0.5px;
 
   &:hover {
     transform: scale(0.98);
-    box-shadow: rgba($dark-grey, 0.15) 1.95px 1.95px 2.6px;
-  }
-  &:active {
-    
+    box-shadow: rgba($light-grey, 0.15) 1.95px 1.95px 2.6px;
   }
 }
 
 
 .btnOutlined {
   @extend %btn;
-  border: 1px solid lighten($dark-grey, 40%);
   background-color: $primary-bg-color;
+  color: $dark-grey;
+  border: thin solid $dark-grey;
 }

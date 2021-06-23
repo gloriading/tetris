@@ -47,9 +47,6 @@ export enum Command {
 }
 
 // TYPE GUARDS
-// export function isShapeInitialized(shape: Block | undefined): shape is Block {
-//   return shape !== undefined;
-// }
 
 export function isActionTypeShape(type: Shape | Direction): type is Shape {
   return type in Shape;

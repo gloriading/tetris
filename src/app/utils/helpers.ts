@@ -6,7 +6,8 @@ export function handleMovement(currState: Block, key: Direction, variationCoords
     [Direction.Down]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
     [Direction.Left]: ([, yCoords]: Coords) => yCoords === BOUND.LEFT,
     [Direction.Right]: ([, yCoords]: Coords) => yCoords === BOUND.RIGHT,
-    [Direction.Up]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
+    [Direction.Up]: ([xCoords, yCoords]: Coords) =>
+      xCoords >= BOUND.DOWN || yCoords < BOUND.LEFT || yCoords > BOUND.RIGHT,
     [Direction.Drop]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
   };
 
@@ -29,11 +30,14 @@ export function handleMovement(currState: Block, key: Direction, variationCoords
 
   const hasReachedBoundary = currState.coords.some(boundFns[key]);
   if (hasReachedBoundary) return currState;
+  // if the next rotate reach boundary and click up, then return currState;
 
   const newCoords = currState.coords.reduce(reducerMap[key], [] as Coords[]);
 
   let newVariation = currState.variation;
   if (key === Direction.Up) {
+    const hasNewCoordsReachedBoundary = newCoords.some(boundFns[key]);
+    if (hasNewCoordsReachedBoundary) return currState;
     newVariation = newVariation === Variation.END ? Variation.START : newVariation + Variation.INCREMENT;
   }
 
@@ -58,4 +62,14 @@ export function getRandomShape(): Block {
 export function getCellType(str: string): string {
   if (!str.includes('_')) return 'basicCell';
   return str.split('_')[1];
+}
+
+// Profiler API
+/* eslint-disable */
+export function logTimes(id: any, phase: any, actualTime: any, baseTime: any, startTime: any, commitTime: any): void {
+  console.log(`${id}'s ${phase} phase:`);
+  console.log(`Actual time: ${actualTime}`);
+  console.log(`Base time: ${baseTime}`);
+  console.log(`Start time: ${startTime}`);
+  console.log(`Commit time: ${commitTime}`);
 }

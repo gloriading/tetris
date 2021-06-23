@@ -10,7 +10,6 @@ export default function useInterval(callback: Callback, delay: number | null): v
 
   useEffect(() => {
     function tick() {
-      console.log('tick');
       const callbackFn = savedCallback.current as Callback;
       callbackFn();
     }

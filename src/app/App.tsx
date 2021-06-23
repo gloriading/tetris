@@ -10,7 +10,7 @@ export function App(): JSX.Element {
   const START_GRID = createGrid(22, 10);
   const [preGrid, setPreGrid] = useState<string[][]>(START_GRID);
   const [grid, setGrid] = useState<string[][]>(START_GRID);
-  const [delay, setDelay] = useState<number>(1000);
+  const [delay, setDelay] = useState<number>(2000);
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(shapeReducer, getRandomShape());
 
