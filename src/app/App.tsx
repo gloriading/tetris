@@ -10,7 +10,7 @@ export function App(): JSX.Element {
   const START_GRID = createGrid(22, 10);
   const [preGrid, setPreGrid] = useState<string[][]>(START_GRID);
   const [grid, setGrid] = useState<string[][]>(START_GRID);
-  const [delay, setDelay] = useState<number>(2000);
+  const [delay, setDelay] = useState<number>(1000);
   const [isRunning, setIsRunning] = useState<boolean>(true);
   const [currShape, shapeDispatch] = useReducer<React.Reducer<Block, ActionType>>(shapeReducer, getRandomShape());
 
@@ -19,7 +19,7 @@ export function App(): JSX.Element {
       return getRandomShape();
     }
     if (isDirection(action.type)) {
-      return handleMovement(state, action.type, SHAPE_VARIATIONS[state.name][state.variation]);
+      return handleMovement(state, action.type, preGrid, SHAPE_VARIATIONS[state.name][state.variation]);
     }
     return state;
   }
@@ -55,7 +55,13 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (currShape.coords.some(([xCoords]) => xCoords === BOUND.DOWN)) {
+    const shouldStop = currShape.coords.some(([xCoords, yCoords]) => {
+      const isBottom = xCoords === BOUND.DOWN;
+      const nextX = xCoords === 21 ? xCoords : xCoords + 1;
+      const isTaken = preGrid[nextX][yCoords].includes('_');
+      return isBottom || isTaken;
+    });
+    if (shouldStop) {
       setIsRunning(false);
     }
 
@@ -64,9 +70,11 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     if (isRunning) return;
-    setPreGrid(grid);
-    shapeDispatch({ type: Command.NEXT_BLOCK });
-    setIsRunning(true);
+    setTimeout(() => {
+      setPreGrid(grid);
+      shapeDispatch({ type: Command.NEXT_BLOCK });
+      setIsRunning(true);
+    }, delay);
   }, [isRunning]);
 
   function updateGrid(blockType: Block) {

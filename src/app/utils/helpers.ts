@@ -1,9 +1,18 @@
 import { BOUND, SHAPES_INIT } from './constants';
 import { Block, Direction, Coords, Variation, Shape } from './types';
 
-export function handleMovement(currState: Block, key: Direction, variationCoords?: Coords[]): Block {
+export function handleMovement(
+  currState: Block,
+  key: Direction,
+  preGrid: string[][],
+  variationCoords?: Coords[],
+): Block {
   const boundFns: { [key in Direction]: (coords: Coords) => boolean } = {
-    [Direction.Down]: ([xCoords]: Coords) => xCoords === BOUND.DOWN,
+    [Direction.Down]: ([xCoords, yCoords]: Coords) => {
+      const isBottom = xCoords === BOUND.DOWN;
+      const isTaken = preGrid[xCoords + 1][yCoords].includes('_');
+      return isBottom || isTaken;
+    },
     [Direction.Left]: ([, yCoords]: Coords) => yCoords === BOUND.LEFT,
     [Direction.Right]: ([, yCoords]: Coords) => yCoords === BOUND.RIGHT,
     [Direction.Up]: ([xCoords, yCoords]: Coords) =>
@@ -20,7 +29,15 @@ export function handleMovement(currState: Block, key: Direction, variationCoords
     [Direction.Drop]: (updatedCoords, [xCoords, yCoords], _idx, originCoords) => {
       const bottomXCoords = Math.max(...originCoords.map((_pair) => _pair[0]));
       const deviation = xCoords - bottomXCoords;
-      return [...updatedCoords, [BOUND.DOWN + deviation, yCoords]];
+      // TODO: need to check all yCoords and compare to find the baseline
+      const asdf = originCoords
+        .map((_pair) => _pair[1])
+        .map((y) => preGrid.findIndex((innerArr) => innerArr[y].includes('_')))
+        .filter((val) => val !== -1);
+      const baseLine = asdf.length === 0 ? BOUND.DOWN : Math.min(...asdf);
+      // const bottomLine = preGrid.findIndex((innerArr) => innerArr[yCoords].includes('_'));
+      // const trueX = bottomLine === -1 ? BOUND.DOWN : bottomLine;
+      return [...updatedCoords, [baseLine + deviation, yCoords]];
     },
     [Direction.Up]: (updatedCoords, [xCoords, yCoords], idx) => {
       const [xDev, yDev] = (variationCoords as Coords[])[idx];
@@ -29,8 +46,10 @@ export function handleMovement(currState: Block, key: Direction, variationCoords
   };
 
   const hasReachedBoundary = currState.coords.some(boundFns[key]);
-  if (hasReachedBoundary) return currState;
-  // if the next rotate reach boundary and click up, then return currState;
+  if (hasReachedBoundary) {
+    console.log('has reached bound 1');
+    return currState;
+  }
 
   const newCoords = currState.coords.reduce(reducerMap[key], [] as Coords[]);
 
